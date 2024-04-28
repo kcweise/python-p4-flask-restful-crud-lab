@@ -11,8 +11,9 @@ app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///plants.db'
 app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
 app.json.compact = False
 
-migrate = Migrate(app, db)
 db.init_app(app)
+migrate = Migrate(app, db)
+
 
 api = Api(app)
 
@@ -44,10 +45,53 @@ api.add_resource(Plants, '/plants')
 class PlantByID(Resource):
 
     def get(self, id):
-        plant = Plant.query.filter_by(id=id).first().to_dict()
-        return make_response(jsonify(plant), 200)
+        plant = Plant.query.filter_by(id=id).first()
+        
+        plant_dict = plant.to_dict()
+        
+        response = make_response(plant_dict, 200)
+        
+        return response
+    
+    def patch(self, id):
+        
+        plant = Plant.query.filter(Plant.id==id).first()
+              
+        # for attr in request.form:
+        #     value = request.form[attr]
+        #     if attr == 'is_in_stock':
+        #         value = value.lower() in ['true', '1', 't', 'y', 'yes']
+                
+        #     if hasattr(plant, attr):
+        #         setattr(plant, attr, value)
+        
+        data = request.get_json()  # Correct way to access JSON data
 
-
+        for attr, value in data.items():
+            if attr == 'is_in_stock':
+                value = str(value).lower() in ['true', '1', 't', 'y', 'yes']
+                
+            if hasattr(plant, attr):
+                setattr(plant, attr, value)
+        
+        db.session.add(plant)    
+        db.session.commit()
+        
+        plant_dict = plant.to_dict()
+        
+        response = make_response(plant_dict, 200)
+        
+        return response
+    
+    def delete(self, id):
+        plant = Plant.query.filter_by(id=id).first()
+        db.session.delete(plant)
+        db.session.commit()
+        
+        response = make_response()
+        
+        return response
+    
 api.add_resource(PlantByID, '/plants/<int:id>')
 
 
